@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tienda Jazz</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #0f172a;
+            color: white;
+            margin: 0;
+        }
+
+        header {
+            background: #1e293b;
+            padding: 15px;
+            text-align: center;
+            font-size: 24px;
+        }
+
+        .container {
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .form-box {
+            width: 30%;
+            background: #1e293b;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: none;
+        }
+
+        button {
+            padding: 10px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .btn-save {
+            background: #22c55e;
+            color: white;
+        }
+
+        .products {
+            width: 70%;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .card {
+            background: #1e293b;
+            padding: 10px;
+            border-radius: 10px;
+        }
+
+        .card img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 5px;
+        }
+
+        .btn-edit {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-delete {
+            background: #ef4444;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>🎷 Tienda de Discos de Jazz</header>
+
+<div class="container">
+
+    <div class="form-box">
+        <h3>Crear / Editar</h3>
+        <form id="form">
+            <input name="name" placeholder="Nombre" required>
+            <input name="description" placeholder="Descripción">
+            <input name="price" placeholder="Precio" required>
+            <input name="stock" placeholder="Stock" required>
+            <input name="image_url" placeholder="URL imagen">
+            <button class="btn-save" type="submit">Guardar</button>
+        </form>
+    </div>
+
+    <div class="products" id="list"></div>
+
+</div>
+
+<script>
+const API = "http://127.0.0.1:8000/products";
+let editingId = null;
+
+async function getProducts() {
+    const res = await fetch(API);
+    const data = await res.json();
+
+    const list = document.getElementById("list");
+    list.innerHTML = "";
+
+    data.forEach(p => {
+        list.innerHTML += `
+            <div class="card">
+                ${p.image_url ? `<img src="${p.image_url}">` : ""}
+                <h4>${p.name}</h4>
+                <p>${p.description || ""}</p>
+                <p>💲 ${p.price}</p>
+                <p>Stock: ${p.stock}</p>
+
+                <button class="btn-edit" onclick="editProduct(${p.id})">Editar</button>
+                <button class="btn-delete" onclick="deleteProduct(${p.id})">Eliminar</button>
+            </div>
+        `;
+    });
+}
+
+document.getElementById("form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const form = e.target;
+
+    const product = {
+        name: form.name.value,
+        description: form.description.value,
+        price: parseFloat(form.price.value),
+        stock: parseInt(form.stock.value),
+        image_url: form.image_url.value
+    };
+
+    if (editingId) {
+        await fetch(`${API}/${editingId}`, {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(product)
+        });
+        editingId = null;
+    } else {
+        await fetch(API, {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(product)
+        });
+    }
+
+    form.reset();
+    getProducts();
+});
+
+async function deleteProduct(id) {
+    await fetch(`${API}/${id}`, { method: "DELETE" });
+    getProducts();
+}
+
+async function editProduct(id) {
+    const res = await fetch(`${API}/${id}`);
+    const p = await res.json();
+
+    const form = document.getElementById("form");
+    form.name.value = p.name;
+    form.description.value = p.description;
+    form.price.value = p.price;
+    form.stock.value = p.stock;
+    form.image_url.value = p.image_url;
+
+    editingId = id;
+}
+
+getProducts();
+</script>
+
+</body>
+</html>
